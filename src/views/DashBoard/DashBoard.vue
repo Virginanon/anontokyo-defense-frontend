@@ -63,7 +63,7 @@ const defaultMenuOption = route.matched[1]?.name?.toString() ?? "cookie-manage";
                 ></NMenu>
             </NLayoutSider>
 
-            <NLayoutContent content-style="padding: 10px">
+            <NLayoutContent content-style="padding: 10px; padding-left: 20px">
                 <RouterView></RouterView>
             </NLayoutContent>
         </NLayout>
