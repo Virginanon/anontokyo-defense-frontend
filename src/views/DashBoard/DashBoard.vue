@@ -6,9 +6,6 @@ import { type MenuOption, NLayout, NLayoutContent, NLayoutSider, NMenu, NIcon, N
 import { CookieOutlined, ReportGmailerrorredOutlined, RadarFilled } from "@vicons/material";
 import { useMediaQuery } from "@vueuse/core";
 
-const isMobile = useMediaQuery("(max-width: 768px)");
-const collapsed = ref(false);
-
 function renderMenuLabel(label: string, key: string) {
     return () => h(RouterLink, { to: { name: key } }, { default: () => label });
 }
@@ -36,6 +33,9 @@ const desktopMenuOptions: MenuOption[] = [
 ];
 
 const route = useRoute();
+const isMobile = useMediaQuery("(max-width: 768px)");
+
+const collapsed = ref(false);
 const defaultMenuOption = route.matched[1]?.name?.toString() ?? "cookie-manage";
 </script>
 
@@ -43,24 +43,11 @@ const defaultMenuOption = route.matched[1]?.name?.toString() ?? "cookie-manage";
     <!-- 桌面端 -->
     <template v-if="!isMobile">
         <NLayout class="desktop-layout" has-sider>
-            <NLayoutSider
-                bordered
-                :width="300"
-                collapse-mode="width"
-                :collapsed="collapsed"
-                :collapsed-width="64"
-                show-trigger="bar"
-                @collapse="collapsed = true"
-                @expand="collapsed = false"
-                content-style="display: flex; flex-direction: column; justify-content: space-between"
-            >
-                <NMenu
-                    :default-value="defaultMenuOption"
-                    :collapsed="collapsed"
-                    :collapsed-width="64"
-                    :collapsed-icon-size="25"
-                    :options="desktopMenuOptions"
-                ></NMenu>
+            <NLayoutSider bordered :width="300" collapse-mode="width" :collapsed="collapsed" :collapsed-width="64"
+                show-trigger="bar" @collapse="collapsed = true" @expand="collapsed = false"
+                content-style="display: flex; flex-direction: column; justify-content: space-between">
+                <NMenu :default-value="defaultMenuOption" :collapsed="collapsed" :collapsed-width="64"
+                    :collapsed-icon-size="25" :options="desktopMenuOptions"></NMenu>
             </NLayoutSider>
 
             <NLayoutContent content-style="padding: 10px; padding-left: 20px">

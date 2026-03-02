@@ -3,6 +3,7 @@ import { h, ref, type Component } from "vue";
 
 import {
     type DataTableColumns,
+    type DataTableRowKey,
     useThemeVars,
     NIcon,
     NCard,
@@ -11,9 +12,10 @@ import {
     NButton,
     NButtonGroup,
     NDataTable,
-    type DataTableRowKey,
     NTag,
     NCode,
+    NModal,
+    NDivider,
 } from "naive-ui";
 import {
     CookieOutlined,
@@ -21,13 +23,17 @@ import {
     NetworkCheckOutlined,
     RefreshOutlined,
     AddBoxOutlined,
+    CloudDownloadOutlined,
+    StopCircleOutlined,
+    NotStartedOutlined,
 } from "@vicons/material";
 
 interface RowData {
     key: number;
     account: string;
     phoneNumber: string;
-    status: "expired" | "unexpired";
+    expired: boolean;
+    disable: boolean;
     cookie: string;
 }
 
@@ -46,29 +52,32 @@ const tableColumns: DataTableColumns<RowData> = [
     },
     {
         key: "phoneNumber",
+        width: 120,
         align: "left",
         title: "手机号",
     },
     {
         key: "status",
-        align: "center",
         title: "状态",
+        align: "center",
         render: rowData => {
-            if (rowData.status === "expired") {
-                return h(NTag, { type: "error" }, { default: () => "已过期" });
-            } else {
-                return h(NTag, { type: "success" }, { default: () => "未过期" });
-            }
+            return [
+                rowData.expired ? h(NTag, { type: "error" }, () => "已过期") : h(NTag, { type: "success" }, () => "未过期"),
+                rowData.disable
+                    ? h(NTag, { type: "warning", style: "margin-left: 1vw" }, () => "已禁用")
+                    : h(NTag, { type: "info", style: "margin-left: 1vw" }, () => "已启用"),
+            ];
         },
     },
     {
         key: "actions",
         title: "操作",
+        width: 350,
         align: "center",
         render: () => {
             interface DataRowActionBtn {
                 label: string;
-                type: "error" | "info" | "primary";
+                type: "error" | "info" | "primary" | "warning";
                 round: boolean;
                 icon: Component;
             }
@@ -76,14 +85,16 @@ const tableColumns: DataTableColumns<RowData> = [
             const btns: DataRowActionBtn[] = [
                 { label: "删除", type: "error", icon: DeleteOutlineOutlined, round: true },
                 { label: "检测", type: "info", icon: NetworkCheckOutlined, round: false },
-                { label: "刷新", type: "primary", icon: RefreshOutlined, round: true },
+                { label: "刷新", type: "primary", icon: RefreshOutlined, round: false },
+                { label: "启用", type: "info", icon: NotStartedOutlined, round: false },
+                { label: "禁用", type: "warning", icon: StopCircleOutlined, round: true },
             ];
             return h(NButtonGroup, null, {
                 default: () => {
                     return btns.map(btn => {
                         return h(
                             NButton,
-                            { type: btn.type, size: "small", round: btn.round },
+                            { type: btn.type, size: "tiny", round: btn.round },
                             { default: () => btn.label, icon: () => h(NIcon, null, { default: () => h(btn.icon) }) },
                         );
                     });
@@ -109,7 +120,8 @@ const tableDatas = ref<RowData[]>([
         key: 1,
         account: "111fjawioejfoaiwjefojawoefjoawjfojweofjawojefoawjefoi",
         phoneNumber: "19230582134",
-        status: "unexpired",
+        expired: false,
+        disable: false,
         cookie: `{
     "name": "session_id",
     "value": "abc123xyz789",
@@ -125,7 +137,8 @@ const tableDatas = ref<RowData[]>([
         key: 2,
         account: "111",
         phoneNumber: "19230582134",
-        status: "expired",
+        expired: true,
+        disable: true,
         cookie: `{
     "name": "session_id",
     "value": "abc123xyz789",
@@ -141,7 +154,8 @@ const tableDatas = ref<RowData[]>([
         key: 3,
         account: "111",
         phoneNumber: "19230582134",
-        status: "unexpired",
+        expired: false,
+        disable: false,
         cookie: `{
     "name": "session_id",
     "value": "abc123xyz789",
@@ -154,12 +168,16 @@ const tableDatas = ref<RowData[]>([
 }`,
     },
 ]);
+
+const addCookieModal = ref(false);
 </script>
 
 <template>
     <div class="container">
         <header>
-            <NIcon :size="30"><CookieOutlined /></NIcon>
+            <NIcon :size="30">
+                <CookieOutlined />
+            </NIcon>
             <h1>cookie 管理</h1>
         </header>
 
@@ -167,10 +185,7 @@ const tableDatas = ref<RowData[]>([
             <NCollapse arrow-placement="right">
                 <NCollapseItem>
                     <template #header>
-                        <p>
-                            可以通过下载 <a href="#" @click.stop>cookie 提取程序</a> 来获取 cookie
-                            文件，展开以查看使用方式
-                        </p>
+                        <p>可以通过下载 <a href="#" @click.stop>cookie 提取程序</a> 来获取 cookie 文件，展开以查看使用方式</p>
                     </template>
                     <div>
                         <p>1. jfaowejfoj</p>
@@ -184,7 +199,7 @@ const tableDatas = ref<RowData[]>([
 
         <section class="table-menus">
             <NButtonGroup>
-                <NButton type="error" round :disabled="checkedRowKeys.length === 0">
+                <NButton type="error" round size="small" :disabled="checkedRowKeys.length === 0">
                     <template #icon>
                         <NIcon>
                             <DeleteOutlineOutlined />
@@ -192,7 +207,7 @@ const tableDatas = ref<RowData[]>([
                     </template>
                     批量删除
                 </NButton>
-                <NButton type="info" :disabled="checkedRowKeys.length === 0">
+                <NButton type="info" size="small" :disabled="checkedRowKeys.length === 0">
                     <template #icon>
                         <NIcon>
                             <NetworkCheckOutlined />
@@ -200,7 +215,7 @@ const tableDatas = ref<RowData[]>([
                     </template>
                     批量检测
                 </NButton>
-                <NButton type="primary" round :disabled="checkedRowKeys.length === 0">
+                <NButton type="primary" size="small" :disabled="checkedRowKeys.length === 0">
                     <template #icon>
                         <NIcon>
                             <RefreshOutlined />
@@ -208,21 +223,59 @@ const tableDatas = ref<RowData[]>([
                     </template>
                     批量刷新
                 </NButton>
+                <NButton type="info" size="small" :disabled="checkedRowKeys.length === 0">
+                    <template #icon>
+                        <NIcon>
+                            <NotStartedOutlined />
+                        </NIcon>
+                    </template>
+                    批量启用
+                </NButton>
+                <NButton type="warning" round size="small" :disabled="checkedRowKeys.length === 0">
+                    <template #icon>
+                        <NIcon>
+                            <StopCircleOutlined />
+                        </NIcon>
+                    </template>
+                    批量禁止
+                </NButton>
             </NButtonGroup>
 
-            <NButton type="primary" round>
-                <template #icon>
-                    <NIcon>
-                        <AddBoxOutlined />
-                    </NIcon>
-                </template>
-                添加 cookie
-            </NButton>
+            <div style="display: flex; gap: 1vw">
+                <NButton type="primary" round @click="addCookieModal = true">
+                    <template #icon>
+                        <NIcon>
+                            <AddBoxOutlined />
+                        </NIcon>
+                    </template>
+                    添加 cookie
+                </NButton>
+                <NButton type="primary" round>
+                    <template #icon>
+                        <NIcon>
+                            <CloudDownloadOutlined />
+                        </NIcon>
+                    </template>
+                    下载 cookie 包
+                </NButton>
+            </div>
         </section>
 
         <section class="table-content">
             <NDataTable v-model:checked-row-keys="checkedRowKeys" striped :columns="tableColumns" :data="tableDatas" />
         </section>
+
+        <NModal v-model:show="addCookieModal">
+            <NCard style="width: 60vw" content-style="display: flex;">
+                <div class="add-cookie-modal__upload-file">
+                    <h3>cookie 文件上传</h3>
+                </div>
+                <NDivider vertical style="height: 400px" />
+                <div class="add-cookie-modal__account-auth">
+                    <h3>账户登录验证</h3>
+                </div>
+            </NCard>
+        </NModal>
     </div>
 </template>
 
@@ -249,10 +302,21 @@ const tableDatas = ref<RowData[]>([
         padding-top: 20px;
         display: flex;
         justify-content: space-between;
+        align-items: flex-end;
     }
 
     .table-content {
         padding-bottom: 10px;
+    }
+}
+
+.add-cookie-modal__upload-file,
+.add-cookie-modal__account-auth {
+    flex: 1;
+
+    h3 {
+        display: flex;
+        justify-content: center;
     }
 }
 </style>
